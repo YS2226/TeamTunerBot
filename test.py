@@ -12,4 +12,4 @@ if os.path.isfile(file_name):
         data = json.load(f)
     print(data)
 else:
-    print(f"File not found: {file_name}")
+    print("File not found: {file_name}")
