@@ -1,6 +1,5 @@
 import discord
 from dotenv import load_dotenv
-from bot_functions import DiscordBot
 import json
 import os
 import sys
@@ -39,6 +38,7 @@ async def send_message(channel_id, message):
     channel = client.get_channel(channel_id)
     if channel:
         await channel.send(message)
+        #TODO ここにVsCodeから情報を受け取ったときの処理を追加
     else:
         print(f"Error: Channel with ID {channel_id} not found")
         await client.close()
