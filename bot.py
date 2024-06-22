@@ -5,14 +5,18 @@ from dotenv import load_dotenv
 import json
 import os
 from discord.ext import commands,tasks
+import websockets
+import asyncio
 
 
 load_dotenv()
 
 # Load bot token from environment variable
 TOKEN = os.getenv('DISCORD_TOKEN')
-CHANNEL =os.getenv('CHANNEL_ID')
-print("channel",CHANNEL)
+WS_URL = 'ws://localhost:8080'
+CHANNEL_ID = os.getenv('DISCORD_CHANNEL_ID')
+print("channel",CHANNEL_ID)
+
 
 # Initialize client with intents
 intents = discord.Intents.default()
@@ -20,10 +24,23 @@ intents.members = True  # Enable the members intent to access member information
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+async def websocket_handler():
+    async with websockets.connect(WS_URL) as websocket:
+        print('Connected to WebSocket server')
+        while True:
+            message = await websocket.recv()
+            parsed_message = json.loads(message)
+            if parsed_message['source'] == 'vscode':
+                print(f"Received from WebSocket server: {parsed_message['message']}")
+                channel = bot.get_channel(int(CHANNEL_ID))
+                if channel:
+                    await channel.send(parsed_message['message'])
+
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user.name}')
-    await process_json('data.json')
+    #await process_json('data.json')
+    bot.loop.create_task(websocket_handler())
 
 
 #@tasks.loop(seconds=0.5)  # Run every 0 seconds
@@ -72,6 +89,9 @@ async def on_reaction_add(reaction, user):
     channel = reaction.message.channel
     await channel.send(f'{user.mention} がお助けします')
 
+    async with websockets.connect(WS_URL) as websocket:
+        await websocket.send(json.dumps({'source': 'discord', 'message': f'{user.display_name} がお助けします'}))
+        print(f'{user.display_name} がお助けします')
 
 bot.run(TOKEN)
 
