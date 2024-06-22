@@ -30,18 +30,35 @@ async def websocket_handler():
             print('Connected to WebSocket server')
             while True:
                 message = await websocket.recv()
-                try:
+                print(type(message))
+                if message == "1":
+                    print(f"解決したと出るメッセージ: {message}")
+                    if channel:
+                        await channel.send(f"上の問題は解決されました!")
+                else:
                     parsed_message = json.loads(message)
                     if isinstance(parsed_message, dict) and 'source' in parsed_message:
                         if parsed_message['source'] == 'vscode':
                             print(f"Received from WebSocket server: {parsed_message['language']}")
                             channel = bot.get_channel(int(CHANNEL_ID))
                             if channel:
+                                solvedName = parsed_message['memberName']
                                 await process_json(parsed_message['memberName'], parsed_message['language'], parsed_message['message'])
-                except json.JSONDecodeError:
-                    if message == '解決した':
-                        if channel:
-                            await channel.send(f"解決しました")
+
+                # if not isinstance(message, str):
+                #     parsed_message = json.loads(message)
+                #     if isinstance(parsed_message, dict) and 'source' in parsed_message:
+                #         if parsed_message['source'] == 'vscode':
+                #             print(f"Received from WebSocket server: {parsed_message['language']}")
+                #             channel = bot.get_channel(int(CHANNEL_ID))
+                #             if channel:
+                #                 await process_json(parsed_message['memberName'], parsed_message['language'], parsed_message['message'])
+                # else :
+                #     print(f"解決したと出るメッセージ: {message}")
+                #     print(f"解決したと出るメッセージ: {message}")
+                #     if message == '解決した':
+                #         if channel:
+                #             await channel.send(f"解決しました")
     except websockets.exceptions.ConnectionClosedError:
         print("Connection closed, retrying in 5 seconds...")
         await asyncio.sleep(5)
