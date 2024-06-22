@@ -25,16 +25,26 @@ intents.members = True  # Enable the members intent to access member information
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 async def websocket_handler():
-    async with websockets.connect(WS_URL) as websocket:
-        print('Connected to WebSocket server')
-        while True:
-            message = await websocket.recv()
-            parsed_message = json.loads(message)
-            if parsed_message['source'] == 'vscode':
-                print(f"Received from WebSocket server: {parsed_message['message']}")
-                channel = bot.get_channel(int(CHANNEL_ID))
-                if channel:
-                    await channel.send(parsed_message['message'])
+    try:
+        async with websockets.connect(WS_URL) as websocket:
+            print('Connected to WebSocket server')
+            while True:
+                message = await websocket.recv()
+                try:
+                    parsed_message = json.loads(message)
+                    if isinstance(parsed_message, dict) and 'source' in parsed_message:
+                        if parsed_message['source'] == 'vscode':
+                            print(f"Received from WebSocket server: {parsed_message['language']}")
+                            channel = bot.get_channel(int(CHANNEL_ID))
+                            if channel:
+                                await process_json(parsed_message['memberName'], parsed_message['language'], parsed_message['message'])
+                except json.JSONDecodeError:
+                    if message == '解決した':
+                        if channel:
+                            await channel.send(f"解決しました")
+    except websockets.exceptions.ConnectionClosedError:
+        print("Connection closed, retrying in 5 seconds...")
+        await asyncio.sleep(5)
 
 @bot.event
 async def on_ready():
@@ -44,18 +54,11 @@ async def on_ready():
 
 
 #@tasks.loop(seconds=0.5)  # Run every 0 seconds
-async def process_json(file):
+async def process_json(name, language, error_script):
     try:
-        with open(file, 'r') as f:
-            data = json.load(f)
-        
-        name = data['error_info'][0]['name']
-        language = data['error_info'][0]['file_format']
-        error_script = data['error_info'][0]['error_type']
-        
-        channel = bot.get_channel(int(CHANNEL))
+        channel = bot.get_channel(int(CHANNEL_ID))
         if channel is None:
-            print(f"Channel with ID {CHANNEL} not found")
+            print(f"Channel with ID {CHANNEL_ID} not found")
             return
 
         # Find the role based on the language
@@ -63,7 +66,8 @@ async def process_json(file):
         role = discord.utils.get(guild.roles, name=language)
         if role is None:
             print(f"Role '{language}' not found")
-            
+            await channel.send(f"{language}を使える人がいないのでロールを新しく付与してください")
+
             return
 
         # Mention members with the specified role
@@ -73,7 +77,7 @@ async def process_json(file):
             return
 
         for member in members:
-            await channel.send(f"{member.mention}, {name}さんが助けを求めています！エラーコード: {error_script}")
+            await channel.send(f"{member.mention} \n {name}さんが助けを求めています！\n エラーコード: {error_script}")
 
     except FileNotFoundError:
         print("data.json file not found")
@@ -92,6 +96,7 @@ async def on_reaction_add(reaction, user):
     async with websockets.connect(WS_URL) as websocket:
         await websocket.send(json.dumps({'source': 'discord', 'message': f'{user.display_name} がお助けします'}))
         print(f'{user.display_name} がお助けします')
+
 
 bot.run(TOKEN)
 
