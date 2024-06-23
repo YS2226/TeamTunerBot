@@ -92,9 +92,7 @@ async def process_json(name, language, error_script):
         if not members:
             await channel.send(f"{language}を使える人がいないのでロールを新しく付与してください")
             return
-
-        for member in members:
-            await channel.send(f"{member.mention} \n {name}さんが助けを求めています！\n エラーコード: {error_script}")
+        await channel.send(" ".join(user.mention for user in members) + f" \n {name}さんが助けを求めています！\n エラーコード: {error_script}")
 
     except FileNotFoundError:
         print("data.json file not found")
@@ -105,15 +103,14 @@ async def process_json(name, language, error_script):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+
 @bot.event
 async def on_reaction_add(reaction, user):
     channel = reaction.message.channel
     await channel.send(f'{user.mention} がお助けします')
-
     async with websockets.connect(WS_URL) as websocket:
         await websocket.send(json.dumps({'source': 'discord', 'message': f'{user.display_name} がお助けします'}))
         print(f'{user.display_name} がお助けします')
-
 
 bot.run(TOKEN)
 
