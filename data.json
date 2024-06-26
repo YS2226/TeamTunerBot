@@ -3,8 +3,8 @@
     "ppl1":[
         {
             "name": "aiueo",
-            "language": "python",
-            "error_script":"error"
+            "file_format": "python",
+            "error_type":"error"
         }
     
     ] 
